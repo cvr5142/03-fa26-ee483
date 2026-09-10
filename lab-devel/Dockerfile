@@ -1,7 +1,7 @@
 # parameters
 ARG REPO_NAME="lab-devel"
-ARG DESCRIPTION="lab-devel"
-ARG MAINTAINER="Romulo"
+ARG DESCRIPTION="03-fa26-ee483"
+ARG MAINTAINER="03"
 # pick an icon from: https://fontawesome.com/v4.7.0/icons/
 ARG ICON="cube"
 
@@ -65,7 +65,7 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh && \
 
 # install launcher scripts
 # COPY ./ex3-recipe/launchers/. "${LAUNCH_PATH}/"
-COPY ./launchers/default.sh "${LAUNCH_PATH}/"
+COPY ./launchers "${LAUNCH_PATH}/"
 RUN dt-install-launchers "${LAUNCH_PATH}"
 
 # define default command
