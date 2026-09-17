@@ -13,6 +13,8 @@ class Driver():#CHANGE CLASSNAME to the name of your class
         self.veh_name = os.environ['VEHICLE_NAME']
         wheels_topic = f"/{self.veh_name}/wheels_driver_node/wheels_cmd"
         self.wheels_cmd=rospy.Publisher(wheels_topic, WheelsCmdStamped, queue_size =10)
+        self.timeStart = rospy.Time.now()
+        
         # Stages: 0 = move, 1 = stop, 2 = turn
         self.stage = 0
 
@@ -23,25 +25,31 @@ class Driver():#CHANGE CLASSNAME to the name of your class
     def drive(self): # CHANGE TO THE NAME OF YOUR FUNCTION
         print("Driving the MM " + self.veh_name + " around the block")
         cmd = WheelsCmdStamped()
-        rospy.Time.now()
         if self.stage == 0:
+            self.timeStart = rospy.Time.now()
             print("Moving forward")
-            cmd.vel_left = THROTTLE *1
-            cmd.vel_right = THROTTLE *1 
-            rospy.sleep(5.)
+            while (rospy.Time.now() -self.timeStart).to_sec() < 2:
+                cmd.vel_left = THROTTLE *1
+                cmd.vel_right = THROTTLE *1 
+                self.wheels_cmd.publish(cmd)
             self.stage = 1
         elif self.stage == 1:
             print("Waiting")
-            rospy.sleep(5.)        
+            # while (rospy.Time.now() -self.timeStart).to_sec()
+            cmd.vel_left = 0
+            cmd.vel_right = 0
+            self.wheels_cmd.publish(cmd) 
+            rospy.sleep(5.)
+
             self.stage = 2
         elif self.stage == 2:
             print("Turning")
-            cmd.vel_left = THROTTLE *1
-            cmd.vel_right = -THROTTLE *1 
+            self.timeStart = rospy.Time.now()
+                cmd.vel_left = THROTTLE *1
+                cmd.vel_right = -THROTTLE *1 
+                self.wheels_cmd.publish(cmd)                
             self.stage = 0
-            rospy.sleep(3)
         print(cmd)
-        self.wheels_cmd.publish(cmd)
 
 
 
