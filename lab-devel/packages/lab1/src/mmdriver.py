@@ -28,7 +28,7 @@ class Driver():#CHANGE CLASSNAME to the name of your class
         if self.stage == 0:
             self.timeStart = rospy.Time.now()
             print("Moving forward")
-            while (rospy.Time.now() -self.timeStart).to_sec() < 2:
+            while (rospy.Time.now() -self.timeStart).to_sec() < 3:
                 cmd.vel_left = THROTTLE *1
                 cmd.vel_right = THROTTLE *1 
                 self.wheels_cmd.publish(cmd)
@@ -45,9 +45,16 @@ class Driver():#CHANGE CLASSNAME to the name of your class
         elif self.stage == 2:
             print("Turning")
             self.timeStart = rospy.Time.now()
-                cmd.vel_left = THROTTLE *1
+            while (rospy.Time.now() -self.timeStart).to_sec() < .3:
+                cmd.vel_left = THROTTLE *0.85
                 cmd.vel_right = -THROTTLE *1 
                 self.wheels_cmd.publish(cmd)                
+            self.stage = 3
+        elif self.stage == 3:
+            cmd.vel_left = 0
+            cmd.vel_right = 0
+            self.wheels_cmd.publish(cmd) 
+            rospy.sleep(2.)
             self.stage = 0
         print(cmd)
 
@@ -66,8 +73,10 @@ if __name__ == "__main__": ## The main function which will be called
 #run
 # Keep the line above - you might be able to reduce the
 # delay a bit,
-        while not rospy.is_shutdown(): # Run ros forever - you can change
+        i = 0
+        while (not rospy.is_shutdown()) and i<16: # Run ros forever - you can change
 # this as well instead of running forever
             mm_driver.drive() # calling your node function
+            i += 1
     except rospy.ROSInterruptException:
         pass
