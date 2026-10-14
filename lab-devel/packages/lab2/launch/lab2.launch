@@ -1,5 +1,7 @@
 <launch>
     <node pkg="lab2" name="lane_detector" type="lanedetector.py" output="screen"/>
+    <node pkg="rqt_image_view" type="rqt_image_view" name="image_view_cropped" args="image_cropped"/>
+    
     <!-- Starts the driver node -->
 
 </launch>

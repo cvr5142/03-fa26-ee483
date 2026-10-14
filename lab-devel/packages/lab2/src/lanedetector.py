@@ -7,7 +7,7 @@ import numpy as np
 from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge
 
-class LaneDetecor:
+class LaneDetector:
     def __init__(self):
         self.bridge = CvBridge()
         
@@ -17,7 +17,7 @@ class LaneDetecor:
         self.edges_pub = rospy.Publisher("image_edges",Image, queue_size=1)
         self.lines_pub = rospy.Publisher("image_lines",Image, queue_size=1)
 
-        self.sub = rospy.Subscriber("/ee403mm03/camera_node/image/compressed", CompressedImage,self.image_cb, queue_size=1, buff_size = 10000000)
+        rospy.Subscriber("/ee483mm03/camera_node/image/compressed", CompressedImage,self.image_cb, queue_size=1, buff_size = 10000000)
 
     def image_cb(self,msg):
         #Convert compressed image
@@ -25,6 +25,8 @@ class LaneDetecor:
 
         height = image.shape[0]
         cropped = image[int(height*0.5):,:]
+        cropped_imgmsg = self.bridge.cv2_to_imgmsg(cropped, "bgr8")
+        self.crop_pub.publish(cropped)
 
         #Convert to HSV
         hsv = cv2.cvtColor(cropped,cv2.COLOR_BGR2HSV)
@@ -32,10 +34,15 @@ class LaneDetecor:
         lower_white=np.array(rospy.get_param("lower_white",[0,0,170],dtype=np.uint8))
         upper_white=np.array(rospy.get_param("upper_white",[180,70,255],dtype=np.uint8))
         white_mask=cv2.inRange(hsv,lower_white,upper_white)
+        white_mask_imgmsg = self.bridge.cv2_to_imgmsg(white_mask, "bgr8")
+        
+        self.white_pub.publish(white_mask)
 
         lower_yellow=np.array(rospy.get_param("lower_yellow",[15,80,80],dtype=np.uint8))
-        upper_yellow=np.array(rospy.get_param("uoer_yellow",[40,255,255],dtype=np.uint8))
+        upper_yellow=np.array(rospy.get_param("upper_yellow",[40,255,255],dtype=np.uint8))
         yellow_mask = cv2.inRange(hsv, lower_yellow,upper_yellow)
+        yellow_mask_imgmsg = self.bridge.cv2_to_imgmsg(yellow_mask, "bgr8")
+        self.yellow_pub.publish(yellow_mask_imgmsg)
 
         #edge detection
         gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
@@ -51,5 +58,9 @@ class LaneDetecor:
         yellow_lines= cv2.HoughLinesP(white_edges,1,np.pi/180,threshold=20,minLineLength=20,maxLineGap=10)
 
 
-
+if __name__=="__main__":
+    # initialize our node and create a publisher as normal
+    rospy.init_node("lane_detector", anonymous=True)
+    lane_detector = LaneDetector()
+    rospy.spin()
 
