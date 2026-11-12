@@ -10,7 +10,8 @@ dt-launchfile-init
 
 # YOUR CODE BELOW THIS LINE
 # ----------------------------------------------------------------------------
-
+catkin build lab3
+source /code/catkin_ws/devel/setup.bash
 
 # NOTE: Use the variable DT_REPO_PATH to know the absolute path to your code
 # NOTE: Use `dt-exec COMMAND` to run the main process (blocking process)

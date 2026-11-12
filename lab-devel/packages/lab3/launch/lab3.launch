@@ -1,0 +1,114 @@
+<launch>
+    <!--
+    Lab 3 lane keeping. CHOOSE YOUR PIPELINE with the two arguments below: change the value inside default="...".
+    The Duckiebot lane controller is always OFF: your controller node drives the robot.
+
+    lane_mask   which lane detector publishes the line segments
+        dtcore      Duckiebot lane detector
+        hsv         your line_detection.py, color masks from your HSV values (rosparam block below)
+        lr          your line_detection.py, color masks from the Ex5 logistic regression (models/model_weights.npz)
+    kf          which node computes the lane pose (d, phi) from the segments
+        false       Duckiebot lane filter (camera only)                -> /<robot>/lane_filter_node/lane_pose
+        true        Kalman filter (camera + wheel encoders)            -> /<robot>/lane_kalman_node/lane_pose
+                    the Duckiebot lane filter keeps running, so you can compare both in rqt_plot
+
+    Examples:  Duckiebot detector + Duckiebot filter    lane_mask=dtcore   kf=false   (as provided)
+               your detector      + Duckiebot filter    lane_mask=hsv|lr   kf=false
+               Duckiebot detector + Kalman filter       lane_mask=dtcore   kf=true
+               your detector      + Kalman filter       lane_mask=hsv|lr   kf=true
+    -->
+    <arg name="lane_mask" default="hsv" doc="dtcore | hsv | lr"/>
+    <arg name="kf" default="false" doc="true: lane pose from the Kalman filter"/>
+
+    <arg name="veh" default="$(env VEHICLE_NAME)"/>
+    <arg name="ai_trafo_mode" default="cb" doc="'cb' for colo balance only; 'both' for color balance and linear trafo"/>
+    <arg name="ai_interval" default="5" doc="interval with which the linear trafo gets updated. color balance is performed every second."/>
+    <arg name="verbose" default="false"/>
+
+    <!-- start Duckietown nodes -->
+    <arg name="demo_name" value="lane_following"/>
+
+    <include file="$(find led_emitter)/launch/led_emitter_node.launch">
+
+        <arg name="veh" value="$(env VEHICLE_NAME)"/>
+
+    </include>
+
+    <!-- start basic args -->
+    <include file="$(find duckietown_demos)/launch/master.launch">
+
+        <!-- Basic arguments -->
+        <arg name="veh" value="$(arg veh)"/>
+        <arg name="demo_name" value="$(arg demo_name)"/>
+        <arg name="param_file_name" value="default" />
+        <arg name="visualization" value="true" />
+
+        <!-- Finite state machine -->
+        <arg name="fsm" value="true"/>
+        <arg name="/fsm/logic_gate" value="false"/>
+
+        <!-- Camera and anti intagram -->
+        <arg name="/camera/raw" value="false" />
+        <arg name="anti_instagram" value="true" />
+
+        <!-- Lane Following stack -->
+        <arg name="lane_following" value="true"/>
+		<!-- The duckiebot lane detector: on only for lane_mask:=dtcore. Otherwise your line_detection.py (below) publishes the segments -->
+        <arg name="/lane_following/line_detection" value="$(eval lane_mask == 'dtcore')"/>
+
+		<arg name="line_detector_param_file_name" value="default" />
+        <arg name="/lane_following/ground_projection" value="true"/>
+
+		<!-- Gets line segments from line_detection and transforms to orientation value phi -->
+        <arg name="/lane_following/lane_filter" value="true"/>
+
+		<!-- The duckiebot PID - keep it false: your controller drives the robot -->
+        <arg name="/lane_following/lane_controller" value="false"/>
+
+    </include>
+
+    <group ns="$(env VEHICLE_NAME)">
+        <!-- Your lane detector, for lane_mask:=hsv or lane_mask:=lr -->
+		<node unless="$(eval lane_mask == 'dtcore')" pkg="lab3" type="line_detection.py" name="line_detection" output="screen">
+			<param name="mask" value="$(arg lane_mask)"/>
+			<!-- CHANGE TO YOUR LAB 2 VALUES -->
+			<rosparam>
+                #lane_mask:=hsv  
+                #cv2.inRange bounds [H, S, V] (OpenCV: H 0-179, S and V 0-255)
+                white_hsv_lower:  [0, 0, 90]
+                white_hsv_upper:  [180, 70, 255]
+                yellow_hsv_lower: [15, 70, 80]
+                yellow_hsv_upper: [40, 255, 255]
+                # lane_mask:=lr  a pixel counts as White/Yellow only if the classifier is at least this sure (0-1)
+                lr_min_confidence_white: 0.5
+                lr_min_confidence_yellow: 0.5
+                # lane_mask:=lr  dilation of the classifier masks, so they also cover the Canny edges on the stripe border
+                # (kernel size in pixels; 0 or 1 = no dilation)
+                lr_dilation: 5
+                # both masks: cv2.Canny thresholds and cv2.HoughLinesP parameters
+                canny: [30, 100]
+                hough_white:  {threshold: 10, min_line_length: 10, max_line_gap: 10}
+                hough_yellow: {threshold: 10, min_line_length: 10, max_line_gap: 10}
+            </rosparam>
+		</node>
+
+		<!-- Lane pose with a Kalman filter, for kf:=true. Publishes /<robot>/lane_kalman_node/lane_pose -->
+		<node if="$(arg kf)" pkg="lab3" type="lane_kalman_node.py" name="lane_kalman_node" output="screen">
+			<rosparam command="load" file="$(find lab3)/config/lane_kalman_node.yaml"/>
+		</node>
+
+		<!-- Add your controller and odometry nodes below.
+		     Subscribe your controller to /<robot>/lane_filter_node/lane_pose; with kf:=true the remap
+		     makes it read the Kalman lane pose instead, without changing your code. Example:
+		<node pkg="lab3" type="lanecontrol.py" name="lane_controller" output="screen">
+			<remap if="$(arg kf)" from="/$(arg veh)/lane_filter_node/lane_pose" to="/$(arg veh)/lane_kalman_node/lane_pose"/>
+		</node>
+		-->
+        <node pkg="lab3" type="lane_pose.py" name="lane_controller" output="screen">
+			<remap if="$(arg kf)" from="/$(arg veh)/lane_filter_node/lane_pose" to="/$(arg veh)/lane_kalman_node/lane_pose"/>
+		</node>
+
+
+    </group>
+
+</launch>

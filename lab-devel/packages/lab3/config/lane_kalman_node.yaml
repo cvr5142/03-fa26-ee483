@@ -1,0 +1,49 @@
+# Parameters of lane_kalman_node.py (loaded in the launch file with <rosparam>).
+
+# ---- Inputs ---------------------------------------------------------------------------------
+# false: use YOUR segments (line_detector_node/segment_list, pixels_normalized) and project them
+#        with the calibration below.
+# true:  use dt-core's ground_projection_node output (segments already in meters); this needs
+#        /lane_following/ground_projection = true in lab3.launch.
+use_ground_projection: false
+
+# Extrinsic calibration. Empty: read /data/config/calibrations/camera_extrinsic/<robot>.yaml.
+# To use a different homography, put its 9 numbers here, e.g. the one estimated from lanes.
+homography: []
+
+# Odometry: wheel encoders; if no tick arrives for this long, integrate car_cmd v and omega instead.
+encoder_timeout: 0.5   # s
+
+# ---- Lane geometry (meters) ------------------------------------------------------------------
+lanewidth: 0.23
+linewidth_white: 0.05
+linewidth_yellow: 0.025
+
+# ---- Per-frame measurement: robust fit of the white and yellow stripes ------------------------
+range_min: 0.0         # use segments whose midpoint is this far from the robot ...
+range_max: 0.33        # ... up to this far (m)
+sample_step: 0.01      # m between points sampled along each segment
+outlier_dist: 0.03     # m; points farther than this from their stripe barely count
+min_segments: 2        # fewer segments -> no measurement this frame
+balance_colors: true   # white and yellow weigh the same
+phi_step: 0.05         # rad, grid for the starting guess
+
+# ---- Kalman filter (variances in m^2 and rad^2) ---------------------------------------------
+sigma_d_0: 0.05        # initial uncertainty when the filter starts or restarts
+sigma_phi_0: 0.3
+q_d_time: 0.0004       # how much d can change per second beyond the odometry prediction
+q_d_dist: 0.0004       # ... per meter traveled (wheel slip)
+q_phi_time: 0.01       # how much phi can change per second
+q_phi_rot: 0.3         # ... per radian turned. Large: the model assumes a straight lane, so in a
+                       #     corner the camera must take over from the odometry
+r_d: 0.02              # measurement noise of one good frame (m)
+r_phi: 0.10            # (rad, ~6 deg)
+quality_floor: 0.2     # a frame with few inliers counts as at most 5x noisier
+single_color_d_scale: 2.0  # d is less certain when only one stripe color is seen
+gate: 9.21             # reject a measurement this unlikely (chi-square 2 dof, 99%)
+max_rejects: 10        # after this many rejections in a row, restart from the measurement
+
+# ---- Output -------------------------------------------------------------------------------
+# LanePose.in_lane is false when no measurement was accepted for this long, or phi is this uncertain
+in_lane_timeout: 1.0   # s
+in_lane_max_sigma_phi: 0.5  # rad

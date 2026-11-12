@@ -1,1 +1,4 @@
 # LIST YOUR PYTHON3 PACKAGES HERE
+scikit-image>=0.19,<0.21
+--ignore-installed scikit-learn
+

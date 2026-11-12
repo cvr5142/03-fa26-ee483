@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-import os
+import os#!/usr/bin/env python3
 import cv2
 import numpy as np
 from sensor_msgs.msg import Image, CompressedImage
