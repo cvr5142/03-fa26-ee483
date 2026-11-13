@@ -90,7 +90,7 @@ class PidNode:
         # self.error_sub = rospy.Subscriber("error", Float32, self.error_callback)
         rospy.Subscriber("/ee483mm03/lane_filter_node/lane_pose", LanePose, self.pid_moving, queue_size=10)
         
-        rospy.sleep(0.5)
+        rospy.sleep(3)
         # rospy.set_param("controller_ready","true")
 
     def pid_moving(self, msg):
@@ -99,7 +99,7 @@ class PidNode:
         angular_velocity = self.controller.calculate(error)
 
         car_cmd = Twist2DStamped()
-        car_cmd.v = 0
+        car_cmd.v = 0.2
         car_cmd.omega = angular_velocity
 
         self.control_pub.publish(car_cmd)
